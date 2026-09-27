@@ -3,6 +3,7 @@
 // ============================================================
 
 // Water
+#define TILE_EMPTY             0   //Empty tile - for copying maps onto maps
 #define TILE_OCEAN             1   // Open ocean
 #define TILE_RIVER             2   // Moving/shallow river water
 #define TILE_STILLWATER        3   // Lakes, ponds, etc.

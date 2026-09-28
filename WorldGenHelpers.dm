@@ -160,3 +160,413 @@ world/proc/MapNeighbours(var/x, var/y)
 		neighbours += list(list(x, y - 1))
 
 	return neighbours
+
+// ============================================================
+// GET POINTS AROUND CIRCLE
+// ============================================================
+//
+// Returns a list of unique random points located on the edge
+// of a circle.
+//
+// The circle edge is generated using the same midpoint-circle
+// logic as DrawCircle(), keeping the returned points
+// consistent with the rasterized circle shape.
+//
+// cx / cy:
+//     Center of the circle.
+//
+// radius:
+//     Circle radius.
+//
+// point_count:
+//     Maximum number of unique points to return.
+//
+// If point_count is greater than the number of available edge
+// tiles, all available edge tiles are returned.
+//
+// Returned format:
+//
+//     list(
+//         list(x, y),
+//         list(x, y),
+//         ...
+//     )
+//
+// ============================================================
+
+world/proc/GetPointsAroundCircle(
+	var/cx,
+	var/cy,
+	var/radius,
+	var/point_count
+)
+	var/list/edge_points = list()
+
+	if(radius < 0 || point_count <= 0)
+		return edge_points
+
+	if(radius == 0)
+		edge_points += list(
+			list(cx, cy)
+		)
+		return edge_points
+
+
+	// --------------------------------------------------------
+	// Build the circle edge using the midpoint circle algorithm.
+	// --------------------------------------------------------
+
+	var/x = radius
+	var/y = 0
+	var/decision = 1 - radius
+
+	while(x >= y)
+
+		var/list/candidates = list(
+			list(cx + x, cy + y),
+			list(cx - x, cy + y),
+			list(cx + x, cy - y),
+			list(cx - x, cy - y),
+
+			list(cx + y, cy + x),
+			list(cx - y, cy + x),
+			list(cx + y, cy - x),
+			list(cx - y, cy - x)
+		)
+
+		// Some symmetry positions overlap when x == y
+		// or y == 0, so make sure each coordinate is added
+		// only once.
+
+		for(var/list/point in candidates)
+
+			var/point_x = point[1]
+			var/point_y = point[2]
+
+			var/already_exists = FALSE
+
+			for(var/list/existing in edge_points)
+				if(existing[1] == point_x && existing[2] == point_y)
+					already_exists = TRUE
+					break
+
+			if(!already_exists)
+				edge_points += list(
+					list(point_x, point_y)
+				)
+
+		y++
+
+		if(decision <= 0)
+			decision += (2 * y) + 1
+
+		else
+			x--
+			decision += (2 * (y - x)) + 1
+
+
+	// --------------------------------------------------------
+	// Randomly select unique points from the edge.
+	//
+	// Remove selected entries from the available list so
+	// duplicates cannot be returned.
+	// --------------------------------------------------------
+
+	var/list/results = list()
+
+	point_count = min(
+		point_count,
+		edge_points.len
+	)
+
+	for(var/i = 1, i <= point_count, i++)
+
+		var/index = rand(
+			1,
+			edge_points.len
+		)
+
+		var/list/point = edge_points[index]
+
+		results += list(
+			list(
+				point[1],
+				point[2]
+			)
+		)
+
+		edge_points.Cut(
+			index,
+			index + 1
+		)
+
+	return results
+
+// ============================================================
+// GET EVEN POINTS AROUND CIRCLE
+// ============================================================
+//
+// Returns a list of unique points located around the edge
+// of a circle, distributed approximately evenly.
+//
+// The circle edge is generated using the same midpoint-circle
+// logic as DrawCircle(), keeping the returned points
+// consistent with the rasterized circle shape.
+//
+// Unlike GetPointsAroundCircle(), this proc divides the circle
+// edge into sections and selects one random point from each
+// section.
+//
+// This prevents returned points from clustering heavily on
+// one side of the circle while still preserving some
+// randomness.
+//
+// Returned format:
+//
+//     list(
+//         list(x, y),
+//         list(x, y),
+//         ...
+//     )
+//
+// ============================================================
+
+world/proc/GetEvenPointsAroundCircle(
+	var/cx,
+	var/cy,
+	var/radius,
+	var/point_count
+)
+	var/list/edge_points = list()
+
+	if(radius < 0 || point_count <= 0)
+		return edge_points
+
+	if(radius == 0)
+		edge_points += list(
+			list(cx, cy)
+		)
+		return edge_points
+
+
+	// --------------------------------------------------------
+	// Generate the same midpoint-circle edge used by
+	// DrawCircle().
+	// --------------------------------------------------------
+
+	var/x = radius
+	var/y = 0
+	var/decision = 1 - radius
+
+	while(x >= y)
+
+		var/list/candidates = list(
+			list(cx + x, cy + y),
+			list(cx - x, cy + y),
+			list(cx + x, cy - y),
+			list(cx - x, cy - y),
+
+			list(cx + y, cy + x),
+			list(cx - y, cy + x),
+			list(cx + y, cy - x),
+			list(cx - y, cy - x)
+		)
+
+		for(var/list/point in candidates)
+
+			var/point_x = point[1]
+			var/point_y = point[2]
+
+			var/already_exists = FALSE
+
+			for(var/list/existing in edge_points)
+				if(existing[1] == point_x && existing[2] == point_y)
+					already_exists = TRUE
+					break
+
+			if(!already_exists)
+				edge_points += list(
+					list(point_x, point_y)
+				)
+
+		y++
+
+		if(decision <= 0)
+			decision += (2 * y) + 1
+
+		else
+			x--
+			decision += (2 * (y - x)) + 1
+
+
+	// --------------------------------------------------------
+	// Cannot return more unique points than exist.
+	// --------------------------------------------------------
+
+	point_count = min(
+		point_count,
+		edge_points.len
+	)
+
+
+	// --------------------------------------------------------
+	// Attach an angle to each edge point.
+	//
+	// BYOND's arctan(y, x) gives us the angle around the
+	// center. Normalize negative angles into 0-360.
+	// --------------------------------------------------------
+
+	var/list/angular_points = list()
+
+	for(var/list/point in edge_points)
+
+		var/dx = point[1] - cx
+		var/dy = point[2] - cy
+
+		var/angle = arctan(dy, dx)
+
+		if(angle < 0)
+			angle += 360
+
+		angular_points += list(
+			list(
+				"x" = point[1],
+				"y" = point[2],
+				"angle" = angle
+			)
+		)
+
+
+	// --------------------------------------------------------
+	// Sort points by angle.
+	//
+	// Simple insertion sort is fine here because circle edges
+	// are relatively small.
+	// --------------------------------------------------------
+
+	for(var/i = 2, i <= angular_points.len, i++)
+
+		var/list/current = angular_points[i]
+		var/j = i - 1
+
+		while(j >= 1 && angular_points[j]["angle"] > current["angle"])
+			angular_points[j + 1] = angular_points[j]
+			j--
+
+		angular_points[j + 1] = current
+
+
+	// --------------------------------------------------------
+	// Divide the ordered circle edge into roughly equal
+	// sections and choose one random point from each section.
+	// --------------------------------------------------------
+
+	var/list/results = list()
+
+	for(var/i = 1, i <= point_count, i++)
+
+		var/start_index = floor(
+			((i - 1) * angular_points.len) / point_count
+		) + 1
+
+		var/end_index = floor(
+			(i * angular_points.len) / point_count
+		)
+
+		if(end_index < start_index)
+			end_index = start_index
+
+		var/chosen_index = rand(
+			start_index,
+			end_index
+		)
+
+		var/list/chosen = angular_points[chosen_index]
+
+		results += list(
+			list(
+				chosen["x"],
+				chosen["y"]
+			)
+		)
+
+	return results
+
+// ============================================================
+// COMBINE UNIQUE POINT LISTS
+// ============================================================
+//
+// Combines two lists of coordinate points into one list,
+// removing any duplicate coordinates.
+//
+// Expected point format:
+//
+//     list(
+//         list(x, y),
+//         list(x, y),
+//         ...
+//     )
+//
+// Points are considered duplicates when both their X and Y
+// coordinates match.
+//
+// The original lists are not modified.
+//
+// ============================================================
+
+world/proc/CombineUniquePointLists(
+	var/list/list_a,
+	var/list/list_b
+)
+	var/list/result = list()
+
+	if(list_a)
+		for(var/list/point in list_a)
+
+			if(!point || point.len < 2)
+				continue
+
+			var/point_x = point[1]
+			var/point_y = point[2]
+
+			var/already_exists = FALSE
+
+			for(var/list/existing in result)
+				if(existing[1] == point_x && existing[2] == point_y)
+					already_exists = TRUE
+					break
+
+			if(!already_exists)
+				result += list(
+					list(
+						point_x,
+						point_y
+					)
+				)
+
+
+	if(list_b)
+		for(var/list/point in list_b)
+
+			if(!point || point.len < 2)
+				continue
+
+			var/point_x = point[1]
+			var/point_y = point[2]
+
+			var/already_exists = FALSE
+
+			for(var/list/existing in result)
+				if(existing[1] == point_x && existing[2] == point_y)
+					already_exists = TRUE
+					break
+
+			if(!already_exists)
+				result += list(
+					list(
+						point_x,
+						point_y
+					)
+				)
+
+	return result

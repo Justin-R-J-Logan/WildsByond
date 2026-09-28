@@ -7,3 +7,5 @@ turf
 		icon_state = "water_01"
 	Rocky
 		icon_state = "ground_rocky_02"
+	Desert
+		icon_state = "sand_desert"

@@ -1357,7 +1357,210 @@ world/proc/GenerateTestingMap()
 			point[2],
 			TILE_DESERT
 		)
+	// ========================================================
+	// TEST 71 - Ledge AutoJoin
+	// ========================================================
+	//
+	// Builds an asymmetric ledge outline with:
+	//
+	// - straight sections
+	// - outer corners
+	// - inner corners
+	//
+	// Then runs AutoJoinAllLedges() so every ledge chooses
+	// its correct icon state.
+	//
+	// ========================================================
 
+	cell = GetTestingCell(71)
+
+	var/start_x = cell[1] + 2
+	var/start_y = cell[2] + 2
+
+	// --------------------------------------------------------
+	// Outer shape
+	// --------------------------------------------------------
+	//
+	// Roughly:
+	//
+	//     ##########
+	//     #        #
+	//     #   ###  #
+	//     #   #    #
+	//     #   ###  #
+	//     #        #
+	//     ##########
+	//
+	// The inward notch should force use of the NTL/NTR/NBL/NBR
+	// inner-corner states.
+	//
+	// --------------------------------------------------------
+
+	var/list/ledge_points = list(
+		list(0, 0),
+		list(1, 0),
+		list(2, 0),
+		list(3, 0),
+		list(4, 0),
+		list(5, 0),
+		list(6, 0),
+		list(7, 0),
+		list(8, 0),
+		list(9, 0),
+
+		list(9, 1),
+		list(9, 2),
+		list(9, 3),
+		list(9, 4),
+		list(9, 5),
+		list(9, 6),
+
+		list(8, 6),
+		list(7, 6),
+		list(6, 6),
+		list(5, 6),
+		list(4, 6),
+		list(3, 6),
+		list(2, 6),
+		list(1, 6),
+		list(0, 6),
+
+		list(0, 5),
+		list(0, 4),
+		list(0, 3),
+		list(0, 2),
+		list(0, 1),
+
+		// Inner notch
+		list(4, 4),
+		list(5, 4),
+		list(6, 4),
+
+		list(4, 3),
+
+		list(4, 2),
+		list(5, 2),
+		list(6, 2)
+	)
+
+	for(var/list/P in ledge_points)
+
+		var/ledge_x = start_x + P[1]
+		var/ledge_y = start_y + P[2]
+
+		var/turf/T = locate(
+			ledge_x,
+			ledge_y,
+			1
+		)
+
+		if(T)
+			new /obj/ledge(T)
+
+
+	// --------------------------------------------------------
+	// Resolve all ledge icon states.
+	// --------------------------------------------------------
+
+	AutoJoinAllLedges()
+
+	// ========================================================
+	// TEST 72 - Ledge Inner Corners
+	// ========================================================
+	//
+	// Creates one continuous ledge outline with an inward
+	// notch on the right-hand side.
+	//
+	// This should force the use of inner-corner states:
+	//
+	//     NTL
+	//     NTR
+	//     NBL
+	//     NBR
+	//
+	// ========================================================
+
+	cell = GetTestingCell(72)
+
+	start_x = cell[1] + 2
+	start_y = cell[2] + 2
+
+	ledge_points = list(
+
+		// Bottom edge
+		list(0, 0),
+		list(1, 0),
+		list(2, 0),
+		list(3, 0),
+		list(4, 0),
+		list(5, 0),
+		list(6, 0),
+		list(7, 0),
+		list(8, 0),
+		list(9, 0),
+		list(10, 0),
+
+		// Right-bottom outer edge
+		list(10, 1),
+		list(10, 2),
+
+		// Move inward to create lower inner corner
+		list(9, 2),
+		list(8, 2),
+		list(7, 2),
+
+		// Inner vertical wall
+		list(7, 3),
+		list(7, 4),
+
+		// Move back outward to create upper inner corner
+		list(8, 4),
+		list(9, 4),
+		list(10, 4),
+
+		// Right-top outer edge
+		list(10, 5),
+		list(10, 6),
+		list(10, 7),
+		list(10, 8),
+
+		// Top edge
+		list(9, 8),
+		list(8, 8),
+		list(7, 8),
+		list(6, 8),
+		list(5, 8),
+		list(4, 8),
+		list(3, 8),
+		list(2, 8),
+		list(1, 8),
+		list(0, 8),
+
+		// Left edge
+		list(0, 7),
+		list(0, 6),
+		list(0, 5),
+		list(0, 4),
+		list(0, 3),
+		list(0, 2),
+		list(0, 1)
+	)
+
+	for(var/list/P in ledge_points)
+
+		var/ledge_x = start_x + P[1]
+		var/ledge_y = start_y + P[2]
+
+		var/turf/T = locate(
+			ledge_x,
+			ledge_y,
+			1
+		)
+
+		if(T)
+			new /obj/ledge(T)
+
+	AutoJoinAllLedges()
 	// ========================================================
 	// Commit all tests to the map
 	// ========================================================
@@ -1437,6 +1640,8 @@ world/proc/GenerateTestingMap()
 	AddTestingLabel(68, "FlipMap - Vertical")
 	AddTestingLabel(69, "Circle Points - Random")
 	AddTestingLabel(70, "Circle Points - Even")
+	AddTestingLabel(71, "Ledge AutoJoin")
+	AddTestingLabel(72, "Ledge Inner Corners")
 	world << "Drawing test map generated: 70 tests."
 
 

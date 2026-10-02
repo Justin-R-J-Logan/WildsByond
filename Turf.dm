@@ -70,11 +70,19 @@ turf
 	Desert
 		icon_state = "sand_desert"
 
-	DarkSand
-		icon_state = "ground_darksand_01"
+	DarkSandDense
+		icon_state = "ground_beach_dense"
+	DarkSandMid
+		icon_state = "ground_beach_mid"
+	DarkSandLight
+		icon_state = "ground_beach_light"
 
-	WhiteSand
-		icon_state = "ground_whitesand"
+	WhiteSandDense
+		icon_state = "ground_whitesand_dense"
+	WhiteSandMid
+		icon_state = "ground_whitesand_mid"
+	WhiteSandLight
+		icon_state = "ground_whitesand_light"
 
 
 	// ========================================================

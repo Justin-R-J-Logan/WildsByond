@@ -14,7 +14,6 @@
 // END_PREFERENCES
 
 // BEGIN_INCLUDE
-#include "TempTests.dm"
 #include "TerrainObjects.dm"
 #include "Turf.dm"
 #include "WildsByond.dm"

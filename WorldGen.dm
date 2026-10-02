@@ -752,6 +752,7 @@ world/proc/GenerateLandmass()
 
 		RoughenCoastline(landmap,3,30,20)
 		AddBeaches(landmap,3,4,20)
+		CleanupIsolatedShorelineWater(landmap)
 	return landmap
 
 // ============================================================
@@ -1286,3 +1287,215 @@ world/proc/AddBeaches(
 						check_y,
 						TILE_BEACH_MID
 					)
+
+// ============================================================
+// IS BEACH TILE
+// ============================================================
+//
+// Returns TRUE if the supplied tile value is one of the
+// generated beach variants.
+//
+// ============================================================
+
+world/proc/IsBeachTile(var/tile)
+
+	if(tile == TILE_BEACH_LIGHT)
+		return TRUE
+
+	if(tile == TILE_BEACH_MID)
+		return TRUE
+
+	if(tile == TILE_BEACH_DENSE)
+		return TRUE
+
+	if(tile == TILE_DARKBEACH_LIGHT)
+		return TRUE
+
+	if(tile == TILE_DARKBEACH_MID)
+		return TRUE
+
+	if(tile == TILE_DARKBEACH_DENSE)
+		return TRUE
+
+	return FALSE
+
+
+// ============================================================
+// CLEANUP ISOLATED SHORELINE WATER
+// ============================================================
+//
+// Removes single isolated ocean tiles left inside generated
+// beaches.
+//
+// An ocean tile is filled when:
+//
+//     - it has no cardinal ocean neighbours
+//     - it is surrounded mostly by beach / land
+//
+// The replacement uses the most common neighbouring beach
+// variant so the cleanup blends into the surrounding shore.
+//
+// ============================================================
+
+world/proc/CleanupIsolatedShorelineWater(var/list/landmap)
+
+	if(!landmap)
+		return
+
+	var/list/to_fill = list()
+
+
+	// ========================================================
+	// FIND ISOLATED OCEAN TILES
+	// ========================================================
+
+	for(var/x = 2, x < world.maxx, x++)
+		for(var/y = 2, y < world.maxy, y++)
+
+			if(MapGet(landmap, x, y) != TILE_OCEAN)
+				continue
+
+
+			// ------------------------------------------------
+			// CARDINAL OCEAN NEIGHBOURS
+			// ------------------------------------------------
+
+			var/cardinal_ocean = 0
+
+			if(MapGet(landmap, x + 1, y) == TILE_OCEAN)
+				cardinal_ocean++
+
+			if(MapGet(landmap, x - 1, y) == TILE_OCEAN)
+				cardinal_ocean++
+
+			if(MapGet(landmap, x, y + 1) == TILE_OCEAN)
+				cardinal_ocean++
+
+			if(MapGet(landmap, x, y - 1) == TILE_OCEAN)
+				cardinal_ocean++
+
+
+			// If it connects directly to more ocean, leave it
+			// alone as part of the actual shoreline.
+
+			if(cardinal_ocean > 0)
+				continue
+
+
+			// ------------------------------------------------
+			// CHECK SURROUNDING LAND / BEACH
+			// ------------------------------------------------
+
+			var/beach_neighbours = 0
+			var/land_neighbours = 0
+
+			for(var/check_x = x - 1, check_x <= x + 1, check_x++)
+				for(var/check_y = y - 1, check_y <= y + 1, check_y++)
+
+					if(check_x == x && check_y == y)
+						continue
+
+					var/near_tile = MapGet(
+						landmap,
+						check_x,
+						check_y
+					)
+
+					if(IsBeachTile(near_tile))
+						beach_neighbours++
+
+					else if(near_tile == TILE_GRASS)
+						land_neighbours++
+
+
+			if(beach_neighbours + land_neighbours < 5)
+				continue
+
+
+			// ------------------------------------------------
+			// FIND MOST COMMON NEARBY BEACH VARIANT
+			// ------------------------------------------------
+
+			var/white_light = 0
+			var/white_mid = 0
+			var/white_dense = 0
+
+			var/dark_light = 0
+			var/dark_mid = 0
+			var/dark_dense = 0
+
+			for(var/check_x = x - 1, check_x <= x + 1, check_x++)
+				for(var/check_y = y - 1, check_y <= y + 1, check_y++)
+
+					if(check_x == x && check_y == y)
+						continue
+
+					var/near_tile = MapGet(
+						landmap,
+						check_x,
+						check_y
+					)
+
+					if(near_tile == TILE_BEACH_LIGHT)
+						white_light++
+
+					else if(near_tile == TILE_BEACH_MID)
+						white_mid++
+
+					else if(near_tile == TILE_BEACH_DENSE)
+						white_dense++
+
+					else if(near_tile == TILE_DARKBEACH_LIGHT)
+						dark_light++
+
+					else if(near_tile == TILE_DARKBEACH_MID)
+						dark_mid++
+
+					else if(near_tile == TILE_DARKBEACH_DENSE)
+						dark_dense++
+
+
+			var/replacement_tile = TILE_BEACH_LIGHT
+			var/best_count = white_light
+
+			if(white_mid > best_count)
+				best_count = white_mid
+				replacement_tile = TILE_BEACH_MID
+
+			if(white_dense > best_count)
+				best_count = white_dense
+				replacement_tile = TILE_BEACH_DENSE
+
+			if(dark_light > best_count)
+				best_count = dark_light
+				replacement_tile = TILE_DARKBEACH_LIGHT
+
+			if(dark_mid > best_count)
+				best_count = dark_mid
+				replacement_tile = TILE_DARKBEACH_MID
+
+			if(dark_dense > best_count)
+				replacement_tile = TILE_DARKBEACH_DENSE
+
+
+			to_fill += list(
+				list(
+					x,
+					y,
+					replacement_tile
+				)
+			)
+
+
+	// ========================================================
+	// APPLY CLEANUP
+	// ========================================================
+
+	for(var/list/P in to_fill)
+
+		MapSet(
+			landmap,
+			P[1],
+			P[2],
+			P[3]
+		)

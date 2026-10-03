@@ -14,6 +14,7 @@
 // END_PREFERENCES
 
 // BEGIN_INCLUDE
+#include "Mob.dm"
 #include "TerrainObjects.dm"
 #include "Turf.dm"
 #include "WildsByond.dm"

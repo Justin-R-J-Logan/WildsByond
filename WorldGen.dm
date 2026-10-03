@@ -88,14 +88,17 @@
 #define BIOME_WATER_CAVE       35  // Flooded / aquatic cave
 
 mob/verb/TestMap()
+	if(can_move==FALSE) return
+	FreezeMovement()
 	world.Generator()
+	UnfreezeMovement()
 
 world/proc/Generator()
 
 	// ========================================================
 	// GENERATION STAGES
 	// ========================================================
-
+	world << "Generating landmass..." // use these to update a bar later.
 	var/list/landmap = GenerateLandmass()
 
 	var/list/biomemap// = GenerateBiomes(landmap)
@@ -115,6 +118,7 @@ world/proc/Generator()
 	// FINAL MAP CREATION
 	// ========================================================
 
+	world << "Committing final map." // use these to update a bar later.
 	CommitMap(
 		landmap,
 		biomemap,
@@ -750,8 +754,11 @@ world/proc/GenerateLandmass()
 			TILE_GRASS
 		)
 
+		world << "3 Coastline passes running." // use these to update a bar later.
 		RoughenCoastline(landmap,3,30,20)
+		world << "Adding beaches." // use these to update a bar later.
 		AddBeaches(landmap,3,4,20)
+		world << "Cleaning up isolated shoreline pieces." // use these to update a bar later.
 		CleanupIsolatedShorelineWater(landmap)
 	return landmap
 

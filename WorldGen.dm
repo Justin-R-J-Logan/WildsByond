@@ -88,13 +88,15 @@
 #define BIOME_WATER_CAVE       35  // Flooded / aquatic cave
 
 mob/verb/TestMap()
-	if(can_move==FALSE) return
 	FreezeMovement()
 	world.Generator()
 	UnfreezeMovement()
 
+var/Generating = 0
 world/proc/Generator()
 
+	if(Generating == 1) return FALSE
+	Generating = 1
 	// ========================================================
 	// GENERATION STAGES
 	// ========================================================
@@ -760,6 +762,7 @@ world/proc/GenerateLandmass()
 		AddBeaches(landmap,3,4,20)
 		world << "Cleaning up isolated shoreline pieces." // use these to update a bar later.
 		CleanupIsolatedShorelineWater(landmap)
+		Generating
 	return landmap
 
 // ============================================================
